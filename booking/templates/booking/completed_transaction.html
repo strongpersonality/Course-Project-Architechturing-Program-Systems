@@ -1,0 +1,49 @@
+{% extends 'booking/base.html' %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-8 text-center">
+    <!-- Иконка успеха -->
+    <div class="inline-block p-4 bg-green-100 rounded-full mb-6">
+        <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+    </div>
+    
+    <h2 class="text-3xl font-bold mb-4">Бронирование подтверждено!</h2>
+    
+    <!-- Детали брони -->
+    <div class="max-w-md mx-auto bg-gray-50 rounded-lg p-6 mb-6 text-left">
+        <div class="space-y-3">
+            <p><span class="font-medium">Номер бронирования:</span> {{ booking.booking_id }}</p>
+            <p><span class="font-medium">Номер:</span> {{ booking.room.room_type.type_name }}</p>
+            <p><span class="font-medium">Даты:</span> {{ booking.check_in_date|date:"d.m.Y" }} - {{ booking.check_out_date|date:"d.m.Y" }}</p>
+            <p><span class="font-medium">Гостей:</span> {{ booking.guests_count }}</p>
+            <p><span class="font-medium">Итоговая стоимость:</span> {{ booking.total_price }} руб.</p>
+            <p><span class="font-medium">Гость:</span> {{ booking.guest.last_name }} {{ booking.guest.first_name }}</p>
+            <p><span class="font-medium">E-mail:</span> {{ booking.guest.email }}</p>
+        </div>
+    </div>
+    
+    <!-- Статусы -->
+    <div class="max-w-md mx-auto mb-8 space-y-2 text-left">
+        <div class="flex items-center text-green-600">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Подтверждение и детали заказа отправлены на ваш e-mail
+        </div>
+        <div class="flex items-center text-green-600">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Персонал отеля уведомлен о бронировании
+        </div>
+    </div>
+    
+    <!-- Кнопка -->
+    <a href="/booking" 
+       class="inline-block bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 transition">
+        Забронировать еще номер
+    </a>
+</div>
+{% endblock %}

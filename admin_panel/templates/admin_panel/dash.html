@@ -1,0 +1,540 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">
+        {% if active_tab == 'dashboard' %}
+            Дашборд
+        {% elif active_tab == 'bookings' %}
+            Управление бронированиями
+        {% elif active_tab == 'rooms' %}
+            Управление номерами
+        {% elif active_tab == 'calendar' %}
+            Календарь бронирований
+        {% elif active_tab == 'reports' %}
+            Отчеты
+        {% endif %}
+    </h1>
+
+    <!-- Контент вкладок -->
+    <div>
+        {% if active_tab == 'dashboard' %}
+            <!-- Виджеты дашборда -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm">Новых бронирований</h3>
+                    <p class="text-3xl font-bold mt-2">{{ new_bookings_count|default:"0" }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm">Гостей сегодня</h3>
+                    <p class="text-3xl font-bold mt-2">{{ guests_today|default:"0" }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm">Свободных номеров</h3>
+                    <p class="text-3xl font-bold mt-2">{{ available_rooms|default:"0" }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm">Доход за месяц</h3>
+                    <p class="text-3xl font-bold mt-2">{{ month_income|default:"0" }} ₽</p>
+                </div>
+            </div>
+
+            <!-- Последняя активность -->
+            <div class="mt-8 bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold mb-4">Последняя активность</h3>
+                <!-- Уведомления о звонках -->
+                {% if unread_notifications %}
+                <div class="mt-8 bg-yellow-50 rounded-lg shadow p-6 border-l-4 border-yellow-400">
+                    <h3 class="text-lg font-semibold mb-4 text-yellow-800">Требуется звонок клиентам</h3>
+                    <div class="space-y-3">
+                        {% for notif in unread_notifications %}
+                        <div class="flex justify-between items-center border-b border-yellow-200 pb-2">
+                            <div>
+                                <p class="font-medium">{{ notif.guest_name }}</p>
+                                <p class="text-sm text-gray-600">{{ notif.guest_phone }}</p>
+                                <p class="text-sm text-gray-600">{{ notif.check_in }} - {{ notif.check_out }}</p>
+                                <p class="text-xs text-gray-500">{{ notif.created_at|timesince }} назад</p>
+                            </div>
+                            <a href="{% url 'mark_notification' notif.id %}"
+               class="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition"
+               onclick="return confirm('Отметить это уведомление как обработанное?')">
+                                Обработано
+                            </a>
+                        </div>
+
+                        {% if notif.notification_type == 'cancellation' %}
+                        <div class="bg-red-50 rounded-lg shadow p-4 border-l-4 border-red-400">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium text-red-800">Требуется уведомить об отмене</p>
+                                    <p class="text-sm">{{ notif.message }}</p>
+                                    <p class="text-sm">{{ notif.guest_name }}</p>
+                                    <p class="text-sm">{{ notif.guest_phone }}</p>
+                                    <p class="text-sm">{{ notif.check_in }} - {{ notif.check_out }}</p>
+                                    <p class="text-xs text-gray-500">{{ notif.created_at|timesince }} назад</p>
+                                </div>
+                                <a href="{% url 'mark_notification' notif.id %}"
+                                   class="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
+                                    Клиент уведомлен
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <div class="space-y-3">
+                    {% for activity in recent_activity %}
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span>{{ activity.text }}</span>
+                        <span class="text-sm text-gray-500">{{ activity.time|timesince }} назад</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500">Нет активности</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% elif active_tab == 'bookings' %}
+            <!-- Кнопка добавления -->
+            <div class="mb-6">
+                <button onclick="openModal()"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Добавить бронирование вручную
+                </button>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Фильтры</h3>
+                <form method="get" action="." class="flex flex-wrap gap-4 items-end">
+                    <input type="hidden" name="tab" value="bookings">
+
+                    <!-- Фильтр по номеру -->
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Номер</label>
+                        <select name="room_filter" class="px-3 py-1 border rounded-lg text-sm">
+                            <option value="all" {% if room_filter == 'all' or not room_filter %}selected{% endif %}>Все номера</option>
+                            {% for room in all_rooms %}
+                            <option value="{{ room.room_id }}" {% if room_filter|stringformat:"s" == room.room_id|stringformat:"s" %}selected{% endif %}>
+                                {{ room.room_number }} ({{ room.room_type.type_name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Кнопки -->
+                    <div class="flex space-x-2">
+                        <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                            Применить
+                        </button>
+                        <a href="?tab=bookings" class="px-4 py-1 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400">
+                            Сбросить
+                        </a>
+                    </div>
+                </form>
+            </div>
+            <!-- Таблица бронирований -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Гость</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Номер</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Даты</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Сумма</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for booking in bookings %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                #{{ booking.booking_id }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ booking.guest.last_name }} {{ booking.guest.first_name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ booking.room.room_number }} ({{ booking.room.room_type.type_name }})
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ booking.check_in_date|date:"d.m.Y" }} - {{ booking.check_out_date|date:"d.m.Y" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                    {% if booking.status == 'confirmed' %}bg-green-100 text-green-800
+                                    {% elif booking.status == 'new' %}bg-yellow-100 text-yellow-800
+                                    {% elif booking.status == 'checked_in' %}bg-blue-100 text-blue-800
+                                    {% elif booking.status == 'checked_out' %}bg-gray-100 text-gray-800
+                                    {% elif booking.status == 'cancelled' %}bg-red-100 text-red-800
+                                    {% endif %}">
+                                    {{ booking.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ booking.total_price }} ₽
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if booking.status == 'new' %}
+                                    <a href="{% url 'confirm_booking_admin' booking.booking_id %}"
+                                       class="text-green-600 hover:text-green-900 mr-3"
+                                       onclick="return confirm('Подтвердить бронирование #{{ booking.booking_id }}?')">
+                                        Подтвердить
+                                    </a>
+                                    <a href="{% url 'cancel_booking' booking.booking_id %}"
+                                       class="text-red-600 hover:text-red-900"
+                                       onclick="return confirm('Отменить бронирование #{{ booking.booking_id }}?')">
+                                        Отменить
+                                    </a>
+
+                                {% elif booking.status == 'confirmed' %}
+                                    <a href="{% url 'checkin_booking' booking.booking_id %}"
+                                       class="text-blue-600 hover:text-blue-900 mr-3"
+                                       onclick="return confirm('Зарегистрировать заезд по бронированию #{{ booking.booking_id }}?')">
+                                        Заезд
+                                    </a>
+                                    <a href="{% url 'cancel_booking' booking.booking_id %}"
+                                       class="text-red-600 hover:text-red-900"
+                                       onclick="return confirm('Отменить бронирование #{{ booking.booking_id }}?')">
+                                        Отменить
+                                    </a>
+
+                                {% elif booking.status == 'checked_in' %}
+                                    <a href="{% url 'checkout_booking' booking.booking_id %}"
+                                       class="text-orange-600 hover:text-orange-900"
+                                       onclick="return confirm('Зарегистрировать выезд по бронированию #{{ booking.booking_id }}?')">
+                                        Выезд
+                                    </a>
+
+                                {% elif booking.status == 'checked_out' %}
+                                    <span class="text-gray-400">Завершено</span>
+
+                                {% elif booking.status == 'cancelled' %}
+                                    <span class="text-gray-400">Отменено</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                Нет бронирований
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        {% elif active_tab == 'rooms' %}
+            <!-- Форма добавления нового номера -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4">Добавить новый номер</h3>
+                <form method="POST" action="{% url 'add_room' %}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Номер</label>
+                        <input type="text" name="room_number" required class="w-full px-3 py-2 border rounded-lg" placeholder="101">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Этаж</label>
+                        <input type="number" name="floor" required class="w-full px-3 py-2 border rounded-lg" placeholder="1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Тип номера</label>
+                        <select name="room_type_id" required class="w-full px-3 py-2 border rounded-lg">
+                            <option value="">Выберите тип</option>
+                            {% for type in room_types %}
+                            <option value="{{ type.room_type_id }}">{{ type.type_name }} ({{ type.base_price }} ₽)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Статус</label>
+                        <select name="status" class="w-full px-3 py-2 border rounded-lg">
+                            {% for status_key, status_name in status_choices %}
+                            <option value="{{ status_key }}" {% if status_key == 'available' %}selected{% endif %}>
+                                {{ status_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            Добавить номер
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Список номеров -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Номер</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Этаж</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Тип</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Цена/ночь</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for room in rooms %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap font-medium">{{ room.room_number }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ room.floor }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ room.room_type.type_name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ room.room_type.base_price }} ₽</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <form method="POST" action="{% url 'update_room_status' room.room_id %}" class="flex items-center space-x-2">
+                                    {% csrf_token %}
+                                    <select name="status" class="text-sm border rounded-lg px-2 py-1">
+                                        {% for status_key, status_name in status_choices %}
+                                        <option value="{{ status_key }}" {% if room.status == status_key %}selected{% endif %}>
+                                            {{ status_name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="text-blue-600 hover:text-blue-800 text-sm">Обновить</button>
+                                </form>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <a href="{% url 'delete_room' room.room_id %}"
+                                   class="text-red-600 hover:text-red-900"
+                                   onclick="return confirm('Вы уверены, что хотите удалить номер {{ room.room_number }}?\n\nУдаление возможно только если нет активных и будущих бронирований.')">
+                                    Удалить
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">Нет добавленных номеров</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        {% elif active_tab == 'calendar' %}
+        <!-- Календарь бронирований -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4">Календарь бронирований</h3>
+
+            <!-- Месяц и выбор номера -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-gray-700">Месяц:</span>
+                    <span class="text-gray-900">{{ month_name }} {{ year }}</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-gray-700">Секция:</span>
+                    <form method="get" action="." class="flex space-x-2">
+                        <input type="hidden" name="tab" value="calendar">
+                        <select name="room_id" class="px-3 py-1 border rounded-lg bg-white text-sm">
+                            <option value="">Выберите номер</option>
+                            {% for room in all_rooms %}
+                            <option value="{{ room.room_id }}" {% if room.room_id|stringformat:"s" == selected_room_id|stringformat:"s" %}selected{% endif %}>
+                                {{ room.room_number }} - {{ room.room_type.type_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                            Показать
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% if show_calendar %}
+            <!-- Календарь -->
+            <div class="mb-4">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Пн</th>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Вт</th>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Ср</th>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Чт</th>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Пт</th>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Сб</th>
+                            <th class="px-2 py-2 text-center text-sm font-medium text-gray-600">Вс</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in calendar %}
+                        <tr>
+                            {% for day in week %}
+                            <td class="px-2 py-2 text-center">
+                                {% if day != 0 %}
+                                    {% if day in bookings_data %}
+                                        <span class="inline-block w-8 h-8 leading-8 bg-red-500 text-white rounded-full text-sm">{{ day }}</span>
+                                    {% else %}
+                                        <span class="inline-block w-8 h-8 leading-8 hover:bg-gray-100 rounded-full text-sm">{{ day }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="inline-block w-8 h-8"></span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Легенда -->
+            <div class="flex items-center space-x-4 text-sm">
+                <div class="flex items-center">
+                    <span class="inline-block w-4 h-4 bg-red-500 rounded-full mr-1"></span>
+                    <span>Занято</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="inline-block w-4 h-4 border border-gray-300 rounded-full mr-1"></span>
+                    <span>Свободно</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                Выберите номер и нажмите "Показать"
+            </div>
+            {% endif %}
+        </div>
+        {% elif active_tab == 'reports' %}
+        <!-- Отчеты -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4">Отчеты</h3>
+
+            <!-- Форма периода и выбора номера -->
+            <div class="mb-6">
+                <div class="flex items-center space-x-4 mb-4">
+                    <span class="text-sm font-medium text-gray-700">Период:</span>
+                    <select name="period" form="report-form" class="px-3 py-1 border rounded-lg text-sm">
+                        <option value="today" {% if period == 'today' %}selected{% endif %}>За сегодня</option>
+                        <option value="week" {% if period == 'week' %}selected{% endif %}>За неделю</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>За месяц</option>
+                        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Произвольный</option>
+                    </select>
+                </div>
+
+                <form id="report-form" method="get" action="." class="space-y-4">
+                    <input type="hidden" name="tab" value="reports">
+
+                    <div class="flex items-center space-x-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">С:</label>
+                            <input type="date" name="start_date" value="{{ start_date }}"
+                                   class="px-3 py-1 border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">По:</label>
+                            <input type="date" name="end_date" value="{{ end_date }}"
+                                   class="px-3 py-1 border rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm font-medium text-gray-700">Номер:</span>
+                        <select name="room_id" class="px-3 py-1 border rounded-lg text-sm">
+                            <option value="all" {% if selected_room_id == 'all' %}selected{% endif %}>Все номера</option>
+                            {% for room in all_rooms %}
+                            <option value="{{ room.room_id }}" {% if selected_room_id|stringformat:"s" == room.room_id|stringformat:"s" %}selected{% endif %}>
+                                {{ room.room_number }} - {{ room.room_type.type_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                            Сформировать
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Таблица отчетов -->
+            <div class="border rounded-lg overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Показатель</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-600">Значение</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 text-sm text-gray-700">Общее количество бронирований</td>
+                            <td class="px-6 py-3 font-medium">{{ total_bookings }}</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 text-sm text-gray-700">Средняя заполняемость</td>
+                            <td class="px-6 py-3 font-medium">{{ occupancy }}%</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3 text-sm text-gray-700">Общий доход</td>
+                            <td class="px-6 py-3 font-medium">{{ total_income }} ₽</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- Модальное окно добавления бронирования -->
+<div id="addBookingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" style="z-index: 1000;">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Новое бронирование</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'add_booking_step1' %}">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Дата заезда *</label>
+                    <input type="date" name="check_in" required min="{{ today|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Дата выезда *</label>
+                    <input type="date" name="check_out" required min="{{ today|date:'Y-m-d' }}" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Количество гостей</label>
+                    <input type="number" name="guests" value="1" min="1" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Отмена</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Показать доступные номера</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal() {
+        document.getElementById('addBookingModal').classList.remove('hidden');
+    }
+    function closeModal() {
+        document.getElementById('addBookingModal').classList.add('hidden');
+    }
+    window.onclick = function(event) {
+        const modal = document.getElementById('addBookingModal');
+        if (event.target == modal) closeModal();
+    }
+</script>
+{% endblock %}

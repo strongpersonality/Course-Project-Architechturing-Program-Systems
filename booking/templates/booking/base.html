@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отель "Черное и белое"</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Навигация -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-2xl font-bold text-gray-800">Отель "Черное и белое"</h1>
+                <!--<div class="space-x-6">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">Главная</a>
+                    <a href="/" class="text-gray-600 hover:text-gray-900">Номера</a>
+                    <a href="/booking" class="text-gray-600 hover:text-gray-900 font-semibold">Бронирование</a>
+                    <a href="/" class="text-gray-600 hover:text-gray-900">Контакты</a>
+                </div>-->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Индикатор шагов -->
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <div class="flex justify-between items-center">
+            {% for step_num, step_name in steps %}
+            <div class="flex items-center {% if step_num <= current_step %}text-blue-600{% else %}text-gray-400{% endif %}">
+                <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center {% if step_num <= current_step %}border-blue-600 bg-blue-50{% else %}border-gray-300{% endif %}">
+                    {{ step_num }}
+                </div>
+                <span class="ml-2">{{ step_name }}</span>
+                {% if not forloop.last %}
+                <div class="w-24 h-0.5 mx-4 {% if step_num < current_step %}bg-blue-600{% else %}bg-gray-300{% endif %}"></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | Отель "Черное и белое"</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <!-- Боковое меню (темно-синее) -->
+        <div class="w-64 bg-[#1e293b] text-white flex flex-col">
+            <!-- Шапка меню -->
+            <div class="p-6 border-b border-gray-700">
+                <h2 class="text-xl font-bold">Отель "Черное и белое"</h2>
+                <p class="text-sm text-gray-400 mt-1">Админ-панель</p>
+            </div>
+
+            <!-- Навигация -->
+            <nav class="flex-1 px-4 py-6">
+                <a href="?tab=dashboard"
+                   class="flex items-center px-4 py-3 mb-2 rounded-lg {% if active_tab == 'dashboard' %}bg-blue-600{% else %}hover:bg-gray-700{% endif %} transition">
+                    <span class="ml-3">Дашборд</span>
+                </a>
+
+                <a href="?tab=bookings"
+                   class="flex items-center px-4 py-3 mb-2 rounded-lg {% if active_tab == 'bookings' %}bg-blue-600{% else %}hover:bg-gray-700{% endif %} transition">
+                    <span class="ml-3">Бронирования</span>
+                </a>
+
+                <a href="?tab=rooms"
+                   class="flex items-center px-4 py-3 mb-2 rounded-lg {% if active_tab == 'rooms' %}bg-blue-600{% else %}hover:bg-gray-700{% endif %} transition">
+                    <span class="ml-3">Номера</span>
+                </a>
+
+                <a href="?tab=calendar"
+                   class="flex items-center px-4 py-3 mb-2 rounded-lg {% if active_tab == 'calendar' %}bg-blue-600{% else %}hover:bg-gray-700{% endif %} transition">
+                    <span class="ml-3">Календарь</span>
+                </a>
+
+                <a href="?tab=reports"
+                   class="flex items-center px-4 py-3 mb-2 rounded-lg {% if active_tab == 'reports' %}bg-blue-600{% else %}hover:bg-gray-700{% endif %} transition">
+                    <span class="ml-3">Отчеты</span>
+                </a>
+            </nav>
+
+            <!-- Информация о пользователе -->
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                        <span class="text-lg font-semibold">{{ user.username|first|upper }}</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="font-medium">{{ user.username }}</p>
+                        <p class="text-sm text-gray-400">Администратор</p>
+                    </div>
+                </div>
+                <a href="{% url 'admin_logout' %}" class="mt-4 block text-sm text-gray-400 hover:text-white transition">
+                    Выйти
+                </a>
+            </div>
+        </div>
+
+        <!-- Основной контент (правая часть) -->
+        <div class="flex-1 overflow-auto">
+            <main class="p-8">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Блок для сообщений -->
+    {% if messages %}
+    <div class="fixed top-4 right-4 z-50">
+        {% for message in messages %}
+        <div class="mb-2 p-4 rounded-lg shadow-lg
+            {% if message.tags == 'success' %}bg-green-500 text-white
+            {% elif message.tags == 'error' %}bg-red-500 text-white
+            {% else %}bg-blue-500 text-white{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</body>
+</html>

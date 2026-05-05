@@ -1,0 +1,47 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold">Выберите номер</h2>
+            <a href="/admin-panel/?tab=bookings" class="text-gray-600 hover:text-gray-900">← Назад</a>
+        </div>
+
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg">
+            <p class="text-gray-700">
+                <span class="font-semibold">Даты:</span> {{ check_in }} — {{ check_out }}<br>
+                <span class="font-semibold">Гостей:</span> {{ guests }} |
+                <span class="font-semibold">Ночей:</span> {{ nights }}
+            </p>
+        </div>
+
+        <div class="space-y-4">
+            {% for room in rooms %}
+            <div class="border rounded-lg p-4 hover:shadow-md transition">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold">Номер {{ room.room_number }}</h3>
+                        <p class="text-gray-600">{{ room.room_type.type_name }}</p>
+                        <p class="text-sm text-gray-500">Вместимость: {{ room.room_type.max_occupancy }} чел.</p>
+                        <p class="text-sm text-gray-500">{{ room.room_type.base_price }} ₽/ночь</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-600">Итого за {{ nights }} ночей:</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ room.total_price }} ₽</p>
+                        <a href="{% url 'add_booking_final' room.room_id %}" 
+                           class="mt-2 inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            Выбрать
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-8 text-gray-500">
+                Нет доступных номеров на выбранные даты
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

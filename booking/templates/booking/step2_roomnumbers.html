@@ -1,0 +1,42 @@
+{% extends 'booking/base.html' %}
+
+{% block content %}
+<h2 class="text-2xl font-semibold mb-6">Доступные номера</h2>
+
+<div class="space-y-6">
+    {% for room in rooms %}
+    <div class="bg-white rounded-lg shadow-md p-6 flex gap-6">
+        <!-- Изображение (заглушка) -->
+        <div class="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400">
+            [Фото номера]
+        </div>
+        
+        <!-- Информация -->
+        <div class="flex-1">
+            <h3 class="text-xl font-semibold mb-2">{{ room.room_type.type_name }}</h3>
+            <p class="text-gray-600 mb-4">{{ room.room_type.description }}</p>
+            
+            <!-- Удобства (временные) -->
+            <div class="flex gap-4 mb-4 text-sm text-gray-500">
+                <span>✓ Wi-Fi</span>
+                <span>✓ Кондиционер</span>
+                <span>✓ Телевизор</span>
+            </div>
+            
+            <!-- Цена и кнопка -->
+            <div class="flex justify-between items-center">
+                <span class="text-2xl font-bold text-blue-600">{{ room.room_type.base_price }} руб.</span>
+                <a href="{% url 'booking_details' room.room_id %}?check_in={{ check_in }}&check_out={{ check_out }}&guests={{ guests }}"
+                   class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Выбрать
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
+        На выбранные даты нет доступных номеров
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
